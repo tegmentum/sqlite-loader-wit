@@ -140,6 +140,74 @@ interface hashing {
     hmac-sha256: func(key: list<u8>, data: list<u8>) -> list<u8>;
 }
 
+/// Synchronous HTTP client, shaped after `wasi:http` but flattened
+/// to avoid wasi-http's resource/pollable/stream machinery. A host
+/// may implement this by delegating to `wasi:http/outgoing-handler`
+/// or by hitting the network directly.
+interface http {
+    /// HTTP method. Mirrors `wasi:http/types.method`.
+    variant method {
+        get,
+        head,
+        post,
+        put,
+        delete,
+        connect,
+        options,
+        trace,
+        patch,
+        /// Non-standard / extension method.
+        other(string),
+    }
+
+    /// URL scheme. Mirrors `wasi:http/types.scheme`.
+    variant scheme {
+        http,
+        https,
+        /// Non-standard scheme.
+        other(string),
+    }
+
+    /// Header field — name + raw bytes value (per wasi-http).
+    type field = tuple<string, list<u8>>;
+
+    /// Outgoing request. Mirrors `wasi:http/types.outgoing-request`
+    /// but flattened from the resource-based wasi-http form into a
+    /// single value-typed record.
+    record request {
+        method: method,
+        scheme: option<scheme>,
+        /// Host (with optional port), e.g. "example.com:8443".
+        authority: option<string>,
+        /// Path + query, e.g. "/api/v1/things?id=42".
+        path-with-query: option<string>,
+        headers: list<field>,
+        body: option<list<u8>>,
+        timeout-ms: option<u32>,
+    }
+
+    /// Incoming response. Mirrors `wasi:http/types.incoming-response`
+    /// in flattened form.
+    record response {
+        status: u16,
+        headers: list<field>,
+        body: list<u8>,
+    }
+
+    /// HTTP error variants. Mirrors the shape of
+    /// `wasi:http/types.error-code` at a higher level.
+    variant http-error {
+        invalid-url(string),
+        timed-out,
+        connection-error(string),
+        protocol-error(string),
+        other(string),
+    }
+
+    /// Send the request and wait for the full response.
+    handle: func(req: request) -> result<response, http-error>;
+}
+
 /// Encoding/decoding helpers.
 interface encoding {
     base64-encode: func(data: list<u8>) -> string;

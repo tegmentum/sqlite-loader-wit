@@ -85,6 +85,7 @@ world full {
     import text;
     import hashing;
     import encoding;
+    import http;
 
     export metadata;
     export lifecycle;
