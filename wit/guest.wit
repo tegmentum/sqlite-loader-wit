@@ -9,6 +9,7 @@ package sqlite:extension@0.1.0;
 /// (e.g. scalar-function.call(func-id, ...)).
 interface metadata {
     use types.{function-flags};
+    use policy.{capability};
 
     /// One scalar SQL function declared by the extension.
     record scalar-function-spec {
@@ -51,6 +52,13 @@ interface metadata {
         has-update-hook: bool,
         /// True if the extension also exports a `commit-hook` interface.
         has-commit-hook: bool,
+        /// REQUIRED: every host capability the extension imports MUST be
+        /// listed here. The loader compares this against
+        /// `load-options.grant` and refuses to load if any item is
+        /// missing from the grant list. Empty list = no host
+        /// capabilities used (extension is pure / only uses its own
+        /// allocator).
+        declared-capabilities: list<capability>,
     }
 
     /// Return the extension's full manifest. Called once by the host
