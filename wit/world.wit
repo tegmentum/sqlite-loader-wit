@@ -45,6 +45,22 @@ world lifecycle-aware {
     export aggregate-function;
 }
 
+/// Extension that adds a custom collation. Inherits the minimal
+/// import set; adds the collation export. Same shape as `minimal`
+/// plus collation — keeps the import surface small for extensions
+/// that only need to compare strings, without forcing them into
+/// the full world's kitchen sink.
+world collating {
+    import types;
+    import spi;
+    import logging;
+    import config;
+
+    export metadata;
+    export scalar-function;
+    export collation;
+}
+
 /// Extension that authorizes SQL actions.
 world authorizing {
     import types;
