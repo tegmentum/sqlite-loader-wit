@@ -110,6 +110,22 @@ world hooked {
     export commit-hook;
 }
 
+/// Extension that exposes one or more virtual-table modules
+/// (v1: read-only). scalar-function is exported alongside vtab
+/// for the same metadata-bootstrap reason as `authorizing`. v1
+/// has no xUpdate / xRename / transactional hooks  see the
+/// vtab interface for the scope.
+world tabular {
+    import types;
+    import spi;
+    import logging;
+    import config;
+
+    export metadata;
+    export scalar-function;
+    export vtab;
+}
+
 /// Full-featured extension — every host capability available, every
 /// guest hook offered. Use this when an extension genuinely needs the
 /// kitchen sink; prefer a narrower world otherwise.
@@ -137,4 +153,5 @@ world full {
     export authorizer;
     export update-hook;
     export commit-hook;
+    export vtab;
 }
