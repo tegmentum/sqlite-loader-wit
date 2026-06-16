@@ -29,6 +29,25 @@ world minimal-http {
     export scalar-function;
 }
 
+/// Minimal + outbound DNS. For extensions whose scalars need to
+/// resolve hostnames (dns_resolve / dns_lookup_mx / etc.). Same
+/// shape as `minimal-http` but with the `dns` import; gated by
+/// `capability::dns` + load-time `dns-policy.allowed-domains`.
+world minimal-dns {
+    import types;
+    import spi;
+    import logging;
+    import config;
+    // `http` is imported because `policy.wit` does `use http.{method}`
+    // for its method-allowlist field; bindgen wants the interface
+    // resolvable even when this world doesn't directly use it.
+    import http;
+    import dns;
+
+    export metadata;
+    export scalar-function;
+}
+
 /// Stateful extension — adds aggregate functions, host-managed state,
 /// and an in-memory cache.
 world stateful {
@@ -161,6 +180,7 @@ world full {
     import hashing;
     import encoding;
     import http;
+    import dns;
 
     export metadata;
     export lifecycle;

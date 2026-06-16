@@ -42,6 +42,7 @@ pub enum Capability {
     Hashing,
     Encoding,
     Http,
+    Dns,
 }
 
 /// Outbound HTTP policy. The host's `http::handle` impl consults
@@ -106,6 +107,47 @@ impl HttpPolicy {
     }
 }
 
+/// Outbound DNS policy. The host's `dns::resolve` impl consults
+/// this before letting an extension issue a lookup.
+#[derive(Debug, Clone, Default)]
+pub struct DnsPolicy {
+    /// Allowlist of domains. Entries may use a leading `*.` for a
+    /// wildcard suffix (same semantics as [`HttpPolicy::allowed_hosts`]).
+    /// Empty list = no domains permitted.
+    pub allowed_domains: Vec<String>,
+    /// Per-request wall-clock timeout. Overrides any timeout the
+    /// extension passes.
+    pub timeout_ms: Option<u32>,
+}
+
+impl DnsPolicy {
+    /// True if `name` matches an allowlist entry (literal or `*.suffix`
+    /// wildcard). Strips a trailing dot from `name` before matching so
+    /// `example.com.` and `example.com` compare equal.
+    pub fn allows(&self, name: &str) -> bool {
+        let name = name.strip_suffix('.').unwrap_or(name);
+        for entry in &self.allowed_domains {
+            if let Some(suffix) = entry.strip_prefix("*.") {
+                if name.ends_with(suffix) && name.len() > suffix.len() {
+                    return true;
+                }
+            } else if entry == name {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// `Ok(())` if allowed; `Err(PolicyError::DnsDomainNotAllowed)` otherwise.
+    pub fn check_domain(&self, name: &str) -> Result<(), PolicyError> {
+        if self.allows(name) {
+            Ok(())
+        } else {
+            Err(PolicyError::DnsDomainNotAllowed(name.to_string()))
+        }
+    }
+}
+
 /// Full per-extension policy. Mirrors
 /// `sqlite:extension/policy.load-options` plus a precomputed grant
 /// set for fast lookups.
@@ -113,6 +155,7 @@ impl HttpPolicy {
 pub struct Policy {
     granted: HashSet<Capability>,
     pub http: Option<HttpPolicy>,
+    pub dns: Option<DnsPolicy>,
     pub fuel_per_call: Option<u64>,
     pub memory_limit_bytes: Option<u64>,
     pub epoch_deadline_ms: Option<u64>,
@@ -134,6 +177,13 @@ impl Policy {
     /// is in the grant list — see [`Self::validate`].
     pub fn with_http(mut self, http: HttpPolicy) -> Self {
         self.http = Some(http);
+        self
+    }
+
+    /// Builder: attach a DNS policy. Required when `Capability::Dns`
+    /// is in the grant list — see [`Self::validate`].
+    pub fn with_dns(mut self, dns: DnsPolicy) -> Self {
+        self.dns = Some(dns);
         self
     }
 
@@ -190,6 +240,9 @@ impl Policy {
         if self.granted.contains(&Capability::Http) && self.http.is_none() {
             return Err(PolicyError::MissingHttpPolicy);
         }
+        if self.granted.contains(&Capability::Dns) && self.dns.is_none() {
+            return Err(PolicyError::MissingDnsPolicy);
+        }
         Ok(())
     }
 }
@@ -208,6 +261,10 @@ pub enum PolicyError {
     MethodNotAllowed(String),
     /// `grant` includes `Http` but `http_policy` was `None`.
     MissingHttpPolicy,
+    /// DNS query targeted a domain outside `dns_policy.allowed_domains`.
+    DnsDomainNotAllowed(String),
+    /// `grant` includes `Dns` but `dns_policy` was `None`.
+    MissingDnsPolicy,
     /// Per-call fuel budget exhausted.
     FuelExhausted,
     /// Memory cap reached.
@@ -224,6 +281,8 @@ impl std::fmt::Display for PolicyError {
             Self::HostNotAllowed(h) => write!(f, "host {h:?} not on http allowlist"),
             Self::MethodNotAllowed(m) => write!(f, "method {m:?} not on http allowlist"),
             Self::MissingHttpPolicy => write!(f, "grant includes http but no http policy attached"),
+            Self::DnsDomainNotAllowed(d) => write!(f, "domain {d:?} not on dns allowlist"),
+            Self::MissingDnsPolicy => write!(f, "grant includes dns but no dns policy attached"),
             Self::FuelExhausted => write!(f, "per-call fuel exhausted"),
             Self::MemoryLimitExceeded => write!(f, "memory limit exceeded"),
             Self::EpochDeadlineExceeded => write!(f, "epoch deadline exceeded"),

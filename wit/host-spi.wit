@@ -208,6 +208,56 @@ interface http {
     handle: func(req: request) -> result<response, http-error>;
 }
 
+/// Synchronous DNS resolver. The host may delegate to a system
+/// stub resolver, the network (e.g. `hickory-resolver`), or a
+/// fixed-answer mock. Capability-gated: extensions that import
+/// this interface must declare `capability::dns` in their manifest
+/// and pass the policy gate (`dns-policy.allowed-domains`) at
+/// load time.
+interface dns {
+    /// DNS record kind. Mirrors the common subset of RFC 1035 +
+    /// RFC 3596 record types. Unknown variants fall through to
+    /// `other(name)` for extensibility.
+    variant record-type {
+        a,
+        aaaa,
+        cname,
+        mx,
+        ns,
+        txt,
+        ptr,
+        soa,
+        srv,
+        other(string),
+    }
+
+    /// DNS error shape. Mirrors `http-error` in flavor (refused vs
+    /// timed-out vs other) without forcing the extension to depend
+    /// on a runtime-specific error enum.
+    variant dns-error {
+        /// Domain not on the allow-list.
+        refused(string),
+        timed-out,
+        /// Resolver returned NXDOMAIN.
+        nxdomain,
+        other(string),
+    }
+
+    /// Resolve `name` for the given record type. Returns a list of
+    /// string-rendered records:
+    ///   * `a`     `123.45.67.89`
+    ///   * `aaaa`  `2001:db8::1`
+    ///   * `cname` / `ns` / `ptr`  hostname
+    ///   * `mx`    `<preference> <exchange>`
+    ///   * `txt`   joined (semicolon-separated) chunks
+    ///   * `soa`   `<mname> <rname> <serial> <refresh> <retry> <expire> <minimum>`
+    ///   * `srv`   `<priority> <weight> <port> <target>`
+    ///
+    /// Empty list means resolution succeeded but no records of that
+    /// type were returned (distinct from `nxdomain`).
+    resolve: func(name: string, record-type: record-type) -> result<list<string>, dns-error>;
+}
+
 /// Encoding/decoding helpers.
 interface encoding {
     base64-encode: func(data: list<u8>) -> string;
