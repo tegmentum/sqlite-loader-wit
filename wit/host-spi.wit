@@ -191,6 +191,20 @@ interface spi {
         func-id: u64,
         window: bool,
     ) -> result<_, sqlite-error>;
+
+    /// Install the loaded extension as the active authorizer on
+    /// the host's shared connection. Replaces any prior authorizer
+    /// (including .auth's stderr logger). Cleared by
+    /// unregister-extension. Stage 5e.10.
+    register-authorizer: func(ext-name: string) -> result<_, sqlite-error>;
+
+    /// Install the loaded extension as the active update-hook.
+    /// Stage 5e.10.
+    register-update-hook: func(ext-name: string) -> result<_, sqlite-error>;
+
+    /// Install the loaded extension as the active commit + rollback
+    /// hook pair. Stage 5e.10.
+    register-commit-hook: func(ext-name: string) -> result<_, sqlite-error>;
 }
 
 /// Prepared statement lifecycle. For extensions that bind once and
