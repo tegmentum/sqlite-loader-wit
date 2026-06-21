@@ -81,6 +81,32 @@ interface spi {
     /// extension to use this directly).
     deserialize-db: func(db-name: string, bytes: list<u8>)
         -> result<_, sqlite-error>;
+
+    /// One row in a named-parameter binding list  the host
+    /// resolves `:name` / `$name` / `@name` to positions for
+    /// the caller.
+    record named-param {
+        /// Bare name (no sigil; the host adds the leading
+        /// `:` / `$` / `@` when binding).
+        name: string,
+        value: sql-value,
+    }
+
+    /// PLAN-cli-shared-conn.md Stage 3c: execute multi-statement
+    /// SQL with named-parameter bindings. The host walks the
+    /// statement list (using sqlite3_prepare_v2's tail return
+    /// to find statement boundaries), binds named params per
+    /// statement, collects rows, returns one query-result per
+    /// statement. Comment-only / whitespace-only segments are
+    /// skipped silently.
+    ///
+    /// Used by the cli's eval_sql_inner  the multi-statement
+    /// + bind-by-name behavior that prevents a straight
+    /// `spi.execute` migration.
+    execute-multi: func(
+        sql: string,
+        named-params: list<named-param>,
+    ) -> result<list<query-result>, sqlite-error>;
 }
 
 /// Prepared statement lifecycle. For extensions that bind once and
