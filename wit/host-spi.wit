@@ -123,11 +123,28 @@ interface spi {
     /// tied to the prior connection (extensions registered via
     /// `.load`, prepared statements, transactions) is invalidated.
     open-db: func(path: string) -> result<_, sqlite-error>;
+}
+
+/// Loader / host-specific extensions to `spi`. Distinct interface
+/// because these methods are about hosting OTHER extensions (the
+/// register-* trampolines + cli-mode toggles), not about querying
+/// SQL  so a "componentized SQLite" library (like sqlite-lib in
+/// the sqlite-wasm repo) implements only `spi`, while a full loader
+/// host (sqlink) implements both `spi` and `spi-loader`.
+///
+/// Extensions that just want to run SQL import `spi`. Extensions
+/// that participate in cli/loader machinery (rare  the cli itself
+/// is the main consumer) import `spi-loader`.
+interface spi-loader {
+    use types.{sqlite-error};
 
     /// Toggle sqlite3's statement-level trace callback on the
     /// host's shared connection. When `on` is true, each prepared
     /// statement's expanded SQL is appended to a host-side buffer;
     /// `drain-trace-buf` retrieves and clears it. Used by `.trace`.
+    /// Hosted here (not in `spi`) because it pairs with `drain-
+    /// trace-buf`, which is host-state-bound  a pure SQLite
+    /// library has no concept of "the cli's trace buffer."
     set-stmt-trace: func(on: bool);
 
     /// Take the buffered trace lines accumulated since the last
