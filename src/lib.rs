@@ -3,8 +3,8 @@
 //!
 //! This crate is the single source of truth for `Capability`,
 //! `HttpPolicy`, `Policy`, and `PolicyError`. Both loader-side hosts
-//! (`sqlite-wasm-loader/runtimes/{wasmtime,wamr}`) and the in-WASM
-//! host (`sqlite-wasm/host`) depend on it so a `Policy` value
+//! (`sqlink-loader/runtimes/{wasmtime,wamr}`) and the in-WASM
+//! host (`sqlink/host`) depend on it so a `Policy` value
 //! constructed once is portable across deployment modes — a fact the
 //! WIT contract advertises, but only this Rust crate enforces at the
 //! type level.
