@@ -87,4 +87,12 @@ interface loader-bridge {
     /// configuration  the canonical "snapshot from live connection"
     /// move from PLAN-bundles.md.
     list-loaded-extensions: func() -> list<loaded-extension>;
+
+    /// The host's current target triple (e.g. `aarch64-apple-darwin`,
+    /// `x86_64-unknown-linux-gnu`). Used by `bundle-cli`'s `.bundle
+    /// build` to (a) tell `spawn-build` which target to ask cargo
+    /// for and (b) record the same value in `bundle-binaries` so
+    /// the launch-flag lookup at exec time matches exactly. The
+    /// host computes this from `std::env::consts` (arch + os).
+    host-target-triple: func() -> string;
 }
