@@ -2,12 +2,21 @@ package sqlite:extension@0.1.0;
 
 /// Minimal extension — read-only SQL + scalar functions. Suitable for
 /// stateless pure functions: text transforms, math, hashing.
+///
+/// `wal-frames` is imported into the base world so the host's loaded
+/// bindgen has a single `wal_frames::Host` trait to implement on
+/// `LoadedState`; per-world reuse via `with:` then folds the same
+/// dispatcher into every widened world without duplicating impls.
+/// Extensions that do not declare `capability::wal-frames` simply
+/// never call the imports; the host's per-method capability gate
+/// fails fast otherwise.
 world minimal {
     import types;
     import spi;
     import session;
     import logging;
     import config;
+    import wal-frames;
 
     export metadata;
     export scalar-function;
